@@ -17,11 +17,12 @@ public class MainTestEFIM_saveToFile {
 	public static void main(String[] arg) throws IOException {
 
 		// the input and output file paths
-		String input = fileToPath("DB_Utility.txt");
+		// String input = fileToPath("DB_Utility.txt");
+		String input = "D:\\CodeHere\\SPMF_NEW_CurrentlyInUse - Copy - Backup for lay dc 2 item ra file - CurrentInUse\\New\\spmf\\ca\\pfv\\spmf\\test\\DB_Utility.txt";
 		String output = ".//output.txt";
 
 		// the minutil threshold
-		int k = 15;
+		int k = 20;
 
 		// Run the EFIM algorithm
 		AlgoEFIM algo = new AlgoEFIM();

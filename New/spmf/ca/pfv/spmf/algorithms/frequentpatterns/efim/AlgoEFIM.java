@@ -1,13 +1,5 @@
 package ca.pfv.spmf.algorithms.frequentpatterns.efim;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-// import java.io.File;
-// import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
@@ -27,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
+// import java.io.File;
+// import java.io.FileInputStream;
 import java.io.*;
 import java.util.*;
 
@@ -80,8 +74,8 @@ public class AlgoEFIM {
 	// Create a fileName to store the name of the file for each items
 	String fileName = "";
 
-	// Create a filePath to store the entire path for the file
-	String filePath = "";
+	// // Create a filePath to store the entire path for the file
+	// String filePath = "";
 	// ----------------------------------------------------------------
 
 	/** the set of high-utility itemsets */
@@ -500,10 +494,15 @@ public class AlgoEFIM {
 
 				currenTransaction = createTransaction(line);
 				currenTransaction.removeUnpromisingItems(oldNameToNewNames);
+
+				if (currenTransaction.items.length == 0) {
+					continue;
+				}
+
 				System.out.println("Sorted transactions: " + " : " + currenTransaction);
 
 				content = currenTransaction.getProjectedItems() + ":" + currenTransaction
-						.getProjectedPWU() + ":" + currenTransaction.getUtility() + "\n";
+						.getProjectedPWU() + ":" + currenTransaction.getUtility() + ":" + 0 + "\n";
 
 				contentBytes = content.getBytes();
 
@@ -937,6 +936,42 @@ public class AlgoEFIM {
 		return new Transaction(items, utilities, transactionUtility);
 	}
 
+	public void projectedTransactionToFile(Transaction inTransaction, String outFile) {
+
+		// Create content to write to file
+		String content;
+
+		// Create content's byte
+		byte[] contentBytes;
+
+		content = inTransaction.getProjectedItems() + ":" + inTransaction
+				.getProjectedPWU() + ":" + inTransaction.getUtility() + ":" + inTransaction.prefixUtility + "\n";
+
+		contentBytes = content.getBytes();
+
+		try (FileChannel channel = FileChannel.open(
+				Paths.get(outFile), StandardOpenOption.CREATE,
+				StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
+			// Allocate a ByteBuffer
+			ByteBuffer buffer = ByteBuffer.allocate(contentBytes.length);
+
+			// Put content into the ByteBuffer
+			buffer.put(contentBytes);
+
+			// Flip the ByteBuffer for writing
+			buffer.flip();
+
+			// Write ByteBuffer to the FileChannel
+			channel.write(buffer);
+			channel.close();
+			buffer.clear();
+
+			// System.out.println("Content has been written to the file successfully.");
+		} catch (IOException error) {
+			error.printStackTrace();
+		}
+	}
+
 	// -------------------------------------------------------------------
 
 	/**
@@ -1004,12 +1039,6 @@ public class AlgoEFIM {
 		// Create currentItem
 		String currentItem;
 
-		// Create content to write to file
-		String content;
-
-		// Create content's byte
-		byte[] contentBytes;
-
 		// ======== for each frequent item e =============
 		for (int j = 0; j < itemsToExplore.size(); j++) {
 			Integer e = itemsToExplore.get(j);
@@ -1024,13 +1053,16 @@ public class AlgoEFIM {
 			} else {
 				currentItem = parentItem + itemsToExplore.get(j);
 			}
-			filePath = folderPath + File.separator + currentItem + ".txt";
-			currentFile = filePath;
+			currentFile = folderPath + File.separator + currentItem + ".txt";
+			File createProjectedFile = new File(currentFile);
+			if (!createProjectedFile.exists()) {
+				createProjectedFile.createNewFile();
+			}
 
 			// ========== PERFORM INTERSECTION =====================
 			// Calculate transactions containing P U {e}
 			// At the same time project transactions to keep what appears after "e"
-			List<Transaction> transactionsPe = new ArrayList<Transaction>();
+			// List<Transaction> transactionsPe = new ArrayList<Transaction>();
 
 			Transaction projectedTransaction = null;
 
@@ -1103,108 +1135,121 @@ public class AlgoEFIM {
 					// }
 					// }
 
+					currenTransaction.prefixUtility = Integer.parseInt(line.split(":")[3]);
+					// How??????
+					// System.out.println("current Transaction: " + currenTransaction);
+					// System.out.println("prefix: " + currenTransaction.prefixUtility);
+
 					// if 'e' was found in the transaction
 					if (positionE > -1) {
 
-						// // optimization: if the 'e' is the last one in this transaction,
-						// // we don't keep the transaction
-						// if (transaction.getLastPosition() == positionE) {
-						// // but we still update the sum of the utility of P U {e}
-						// utilityPe += transaction.utilities[positionE] + transaction.prefixUtility;
-						// } else {
-						// // otherwise
-						// if (activateTransactionMerging
-						// && MAXIMUM_SIZE_MERGING >= (transaction.items.length - positionE)) {
-						// // we cut the transaction starting from position 'e'
-						// Transaction projectedTransaction = new Transaction(transaction, positionE);
-						// utilityPe += projectedTransaction.prefixUtility;
+						// optimization: if the 'e' is the last one in this transaction,
+						// we don't keep the transaction
+						if (currenTransaction.getLastPosition() == positionE) {
+							// but we still update the sum of the utility of P U {e}
+							utilityPe += currenTransaction.utilities[positionE] + currenTransaction.prefixUtility;
 
-						// // if it is the first transaction that we read
-						// if (previousTransaction == null) {
-						// // we keep the transaction in memory
-						// previousTransaction = projectedTransaction;
-						// } else if (isEqualTo(projectedTransaction, previousTransaction)) {
-						// // If it is not the first transaction of the database and
-						// // if the transaction is equal to the previously read transaction,
-						// // we will merge the transaction with the previous one
+						} else {
+							// otherwise
+							if (activateTransactionMerging
+									&& MAXIMUM_SIZE_MERGING >= (currenTransaction.items.length - positionE)) {
+								// we cut the transaction starting from position 'e'
+								projectedTransaction = new Transaction(currenTransaction, positionE);
+								utilityPe += projectedTransaction.prefixUtility;
 
-						// // increase the number of consecutive transactions merged
-						// mergeCount++;
+								// System.out.println(projectedTransaction.prefixUtility);
 
-						// // if the first consecutive merge
-						// if (consecutiveMergeCount == 0) {
-						// // copy items and their profit from the previous transaction
-						// int itemsCount = previousTransaction.items.length -
-						// previousTransaction.offset;
-						// int[] items = new int[itemsCount];
-						// System.arraycopy(previousTransaction.items, previousTransaction.offset,
-						// items, 0,
-						// itemsCount);
-						// int[] utilities = new int[itemsCount];
-						// System.arraycopy(previousTransaction.utilities, previousTransaction.offset,
-						// utilities, 0, itemsCount);
+								// System.out.println(previousTransaction);
 
-						// // make the sum of utilities from the previous transaction
-						// int positionPrevious = 0;
-						// int positionProjection = projectedTransaction.offset;
-						// while (positionPrevious < itemsCount) {
-						// utilities[positionPrevious] +=
-						// projectedTransaction.utilities[positionProjection];
-						// positionPrevious++;
-						// positionProjection++;
-						// }
+								// if it is the first transaction that we read
+								if (previousTransaction == null) {
+									// we keep the transaction in memory
+									previousTransaction = projectedTransaction;
 
-						// // make the sum of prefix utilities
-						// int sumUtilities = previousTransaction.prefixUtility +=
-						// projectedTransaction.prefixUtility;
+								} else if (isEqualTo(projectedTransaction, previousTransaction)) {
+									// If it is not the first transaction of the database and
+									// if the transaction is equal to the previously read transaction,
+									// we will merge the transaction with the previous one
 
-						// // create the new transaction replacing the two merged transactions
-						// previousTransaction = new Transaction(items, utilities,
-						// previousTransaction.transactionUtility
-						// + projectedTransaction.transactionUtility);
-						// previousTransaction.prefixUtility = sumUtilities;
+									// increase the number of consecutive transactions merged
+									mergeCount++;
 
-						// } else {
-						// // if not the first consecutive merge
+									// if the first consecutive merge
+									if (consecutiveMergeCount == 0) {
+										// copy items and their profit from the previous transaction
+										int itemsCount = previousTransaction.items.length -
+												previousTransaction.offset;
+										int[] items = new int[itemsCount];
+										System.arraycopy(previousTransaction.items, previousTransaction.offset,
+												items, 0,
+												itemsCount);
+										int[] utilities = new int[itemsCount];
+										System.arraycopy(previousTransaction.utilities, previousTransaction.offset,
+												utilities, 0, itemsCount);
 
-						// // add the utilities in the projected transaction to the previously
-						// // merged transaction
-						// int positionPrevious = 0;
-						// int positionProjected = projectedTransaction.offset;
-						// int itemsCount = previousTransaction.items.length;
-						// while (positionPrevious < itemsCount) {
-						// previousTransaction.utilities[positionPrevious] +=
-						// projectedTransaction.utilities[positionProjected];
-						// positionPrevious++;
-						// positionProjected++;
-						// }
+										// make the sum of utilities from the previous transaction
+										int positionPrevious = 0;
+										int positionProjection = projectedTransaction.offset;
+										while (positionPrevious < itemsCount) {
+											utilities[positionPrevious] += projectedTransaction.utilities[positionProjection];
+											positionPrevious++;
+											positionProjection++;
+										}
 
-						// // make also the sum of transaction utility and prefix utility
-						// previousTransaction.transactionUtility +=
-						// projectedTransaction.transactionUtility;
-						// previousTransaction.prefixUtility += projectedTransaction.prefixUtility;
-						// }
-						// // increment the number of consecutive transaction merged
-						// consecutiveMergeCount++;
-						// } else {
-						// // if the transaction is not equal to the preceding transaction
-						// // we cannot merge it so we just add it to the database
-						// transactionsPe.add(previousTransaction);
-						// // the transaction becomes the previous transaction
-						// previousTransaction = projectedTransaction;
-						// // and we reset the number of consecutive transactions merged
-						// consecutiveMergeCount = 0;
-						// }
-						// } else {
-						// // Otherwise, if merging has been deactivated
-						// // then we just create the projected transaction
-						projectedTransaction = new Transaction(currenTransaction, positionE);
-						// // we add the utility of Pe in that transaction to the total utility of Pe
-						utilityPe += projectedTransaction.prefixUtility;
-						// // we put the projected transaction in the projected database of Pe
-						// transactionsPe.add(projectedTransaction);
-						// }
-						// }
+										// make the sum of prefix utilities
+										int sumUtilities = previousTransaction.prefixUtility += projectedTransaction.prefixUtility;
+
+										// create the new transaction replacing the two merged transactions
+										previousTransaction = new Transaction(items, utilities,
+												previousTransaction.transactionUtility
+														+ projectedTransaction.transactionUtility);
+										previousTransaction.prefixUtility = sumUtilities;
+
+									} else {
+										// if not the first consecutive merge
+
+										// add the utilities in the projected transaction to the previously
+										// merged transaction
+										int positionPrevious = 0;
+										int positionProjected = projectedTransaction.offset;
+										int itemsCount = previousTransaction.items.length;
+										while (positionPrevious < itemsCount) {
+											previousTransaction.utilities[positionPrevious] += projectedTransaction.utilities[positionProjected];
+											positionPrevious++;
+											positionProjected++;
+										}
+
+										// make also the sum of transaction utility and prefix utility
+										previousTransaction.transactionUtility += projectedTransaction.transactionUtility;
+										previousTransaction.prefixUtility += projectedTransaction.prefixUtility;
+									}
+									// increment the number of consecutive transaction merged
+									consecutiveMergeCount++;
+
+								} else {
+									projectedTransactionToFile(previousTransaction, currentFile);
+
+									// if the transaction is not equal to the preceding transaction
+									// we cannot merge it so we just add it to the database
+									// transactionsPe.add(previousTransaction);
+									// the transaction becomes the previous transaction
+									previousTransaction = projectedTransaction;
+									// and we reset the number of consecutive transactions merged
+									consecutiveMergeCount = 0;
+								}
+							} else {
+								// Otherwise, if merging has been deactivated
+								// then we just create the projected transaction
+								projectedTransaction = new Transaction(currenTransaction, positionE);
+								// we add the utility of Pe in that transaction to the total utility of Pe
+								utilityPe += projectedTransaction.prefixUtility;
+								// we put the projected transaction in the projected database of Pe
+								// transactionsPe.add(projectedTransaction);
+
+								projectedTransactionToFile(projectedTransaction, currentFile);
+
+							}
+						}
 						// This is an optimization for binary search:
 						// we remember the position of E so that for the next item, we will not search
 						// before "e" in the transaction since items are visited in lexicographical
@@ -1228,32 +1273,32 @@ public class AlgoEFIM {
 
 						// System.out.println("Current parentItem: " + parentItem);
 
-						content = projectedTransaction.getProjectedItems() + ":" + projectedTransaction
-								.getProjectedPWU() + ":" + projectedTransaction.getUtility() + "\n";
+						// content = previousTransaction.getProjectedItems() + ":" + previousTransaction
+						// .getProjectedPWU() + ":" + previousTransaction.getUtility() + "\n";
 
-						contentBytes = content.getBytes();
+						// contentBytes = content.getBytes();
 
-						try (FileChannel channel = FileChannel.open(
-								Paths.get(filePath), StandardOpenOption.CREATE,
-								StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
-							// Allocate a ByteBuffer
-							ByteBuffer buffer = ByteBuffer.allocate(contentBytes.length);
+						// try (FileChannel channel = FileChannel.open(
+						// Paths.get(filePath), StandardOpenOption.CREATE,
+						// StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
+						// // Allocate a ByteBuffer
+						// ByteBuffer buffer = ByteBuffer.allocate(contentBytes.length);
 
-							// Put content into the ByteBuffer
-							buffer.put(contentBytes);
+						// // Put content into the ByteBuffer
+						// buffer.put(contentBytes);
 
-							// Flip the ByteBuffer for writing
-							buffer.flip();
+						// // Flip the ByteBuffer for writing
+						// buffer.flip();
 
-							// Write ByteBuffer to the FileChannel
-							channel.write(buffer);
-							channel.close();
-							buffer.clear();
+						// // Write ByteBuffer to the FileChannel
+						// channel.write(buffer);
+						// channel.close();
+						// buffer.clear();
 
-							// System.out.println("Content has been written to the file successfully.");
-						} catch (IOException error) {
-							error.printStackTrace();
-						}
+						// // System.out.println("Content has been written to the file successfully.");
+						// } catch (IOException error) {
+						// error.printStackTrace();
+						// }
 
 						// utilityPe += Integer.parseInt(projectedTransaction.getProjectedPWU());
 						// System.out.println(projectedTransaction.getProjectedPWU());
@@ -1280,238 +1325,27 @@ public class AlgoEFIM {
 				error.printStackTrace();
 			}
 
-			// ----------------------------------------------------------------
-
-			// // For each transaction
-			// for (Transaction transaction : transactionsOfP) {
-			// // Increase the number of transaction read
-			// transactionReadingCount++;
-
-			// // To record the time for performing binary searh
-			// long timeBinaryLocal = System.currentTimeMillis();
-
-			// // we remember the position where e appears.
-			// // we will call this position an "offset"
-			// int positionE = -1;
-			// // Variables low and high for binary search
-			// int low = transaction.offset;
-			// int high = transaction.items.length - 1;
-
-			// // perform binary search to find e in the transaction
-			// while (high >= low) {
-			// int middle = (low + high) >>> 1; // divide by 2
-			// if (transaction.items[middle] < e) {
-			// low = middle + 1;
-			// } else if (transaction.items[middle] == e) {
-			// positionE = middle;
-			// break;
-			// } else {
-			// high = middle - 1;
-			// }
-			// }
-			// // record the time spent for performing the binary search
-			// timeBinarySearch += System.currentTimeMillis() - timeBinaryLocal;
-
-			// // if(prefixLength == 0 && newNamesToOldNames[e] == 385) {
-			// // for(int i=0; i < transaction.getItems().length; i++) {
-			// // if(transaction.getItems()[i] == e) {
-			// // innerSum += transaction.getUtilities()[i];
-			// // }
-			// // }
-			// // }
-
-			// // if 'e' was found in the transaction
-			// if (positionE > -1) {
-
-			// // // optimization: if the 'e' is the last one in this transaction,
-			// // // we don't keep the transaction
-			// // if (transaction.getLastPosition() == positionE) {
-			// // // but we still update the sum of the utility of P U {e}
-			// // utilityPe += transaction.utilities[positionE] + transaction.prefixUtility;
-			// // } else {
-			// // // otherwise
-			// // if (activateTransactionMerging
-			// // && MAXIMUM_SIZE_MERGING >= (transaction.items.length - positionE)) {
-			// // // we cut the transaction starting from position 'e'
-			// // Transaction projectedTransaction = new Transaction(transaction,
-			// positionE);
-			// // utilityPe += projectedTransaction.prefixUtility;
-
-			// // // if it is the first transaction that we read
-			// // if (previousTransaction == null) {
-			// // // we keep the transaction in memory
-			// // previousTransaction = projectedTransaction;
-			// // } else if (isEqualTo(projectedTransaction, previousTransaction)) {
-			// // // If it is not the first transaction of the database and
-			// // // if the transaction is equal to the previously read transaction,
-			// // // we will merge the transaction with the previous one
-
-			// // // increase the number of consecutive transactions merged
-			// // mergeCount++;
-
-			// // // if the first consecutive merge
-			// // if (consecutiveMergeCount == 0) {
-			// // // copy items and their profit from the previous transaction
-			// // int itemsCount = previousTransaction.items.length -
-			// // previousTransaction.offset;
-			// // int[] items = new int[itemsCount];
-			// // System.arraycopy(previousTransaction.items, previousTransaction.offset,
-			// // items, 0,
-			// // itemsCount);
-			// // int[] utilities = new int[itemsCount];
-			// // System.arraycopy(previousTransaction.utilities,
-			// previousTransaction.offset,
-			// // utilities, 0, itemsCount);
-
-			// // // make the sum of utilities from the previous transaction
-			// // int positionPrevious = 0;
-			// // int positionProjection = projectedTransaction.offset;
-			// // while (positionPrevious < itemsCount) {
-			// // utilities[positionPrevious] +=
-			// // projectedTransaction.utilities[positionProjection];
-			// // positionPrevious++;
-			// // positionProjection++;
-			// // }
-
-			// // // make the sum of prefix utilities
-			// // int sumUtilities = previousTransaction.prefixUtility +=
-			// // projectedTransaction.prefixUtility;
-
-			// // // create the new transaction replacing the two merged transactions
-			// // previousTransaction = new Transaction(items, utilities,
-			// // previousTransaction.transactionUtility
-			// // + projectedTransaction.transactionUtility);
-			// // previousTransaction.prefixUtility = sumUtilities;
-
-			// // } else {
-			// // // if not the first consecutive merge
-
-			// // // add the utilities in the projected transaction to the previously
-			// // // merged transaction
-			// // int positionPrevious = 0;
-			// // int positionProjected = projectedTransaction.offset;
-			// // int itemsCount = previousTransaction.items.length;
-			// // while (positionPrevious < itemsCount) {
-			// // previousTransaction.utilities[positionPrevious] +=
-			// // projectedTransaction.utilities[positionProjected];
-			// // positionPrevious++;
-			// // positionProjected++;
-			// // }
-
-			// // // make also the sum of transaction utility and prefix utility
-			// // previousTransaction.transactionUtility +=
-			// // projectedTransaction.transactionUtility;
-			// // previousTransaction.prefixUtility += projectedTransaction.prefixUtility;
-			// // }
-			// // // increment the number of consecutive transaction merged
-			// // consecutiveMergeCount++;
-			// // } else {
-			// // // if the transaction is not equal to the preceding transaction
-			// // // we cannot merge it so we just add it to the database
-			// // transactionsPe.add(previousTransaction);
-			// // // the transaction becomes the previous transaction
-			// // previousTransaction = projectedTransaction;
-			// // // and we reset the number of consecutive transactions merged
-			// // consecutiveMergeCount = 0;
-			// // }
-			// // } else {
-			// // // Otherwise, if merging has been deactivated
-			// // // then we just create the projected transaction
-			// projectedTransaction = new Transaction(transaction, positionE);
-			// // // we add the utility of Pe in that transaction to the total utility of Pe
-			// utilityPe += projectedTransaction.prefixUtility;
-			// // // we put the projected transaction in the projected database of Pe
-			// // transactionsPe.add(projectedTransaction);
-			// // }
-			// // }
-			// // This is an optimization for binary search:
-			// // we remember the position of E so that for the next item, we will not
-			// search
-			// // before "e" in the transaction since items are visited in lexicographical
-			// // order
-			// transaction.offset = positionE;
-
-			// // ----------------------------------------------------------------
-			// // System.out.println();
-			// // System.out.println("Current transaction: " + transaction);
-			// // System.out.println("Current item: " + e + " found at position " +
-			// positionE);
-
-			// // projectedTransaction = new Transaction(transaction, positionE);
-			// // System.out.println("Result: " + projectedTransaction);
-
-			// // for (int i = 0; i < projectedTransaction.items.length; i++) {
-			// // System.out.print(projectedTransaction.items[i] + " ");
-			// // }
-			// // System.out.println();
-
-			// // write Projected transactions out to files
-
-			// // System.out.println("Current parentItem: " + parentItem);
-
-			// content = projectedTransaction.getProjectedItems() + ":" +
-			// projectedTransaction
-			// .getProjectedPWU() + ":" + projectedTransaction.getUtility() + "\n";
-
-			// contentBytes = content.getBytes();
-
-			// try (FileChannel channel = FileChannel.open(
-			// Paths.get(filePath), StandardOpenOption.CREATE,
-			// StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
-			// // Allocate a ByteBuffer
-			// ByteBuffer buffer = ByteBuffer.allocate(contentBytes.length);
-
-			// // Put content into the ByteBuffer
-			// buffer.put(contentBytes);
-
-			// // Flip the ByteBuffer for writing
-			// buffer.flip();
-
-			// // Write ByteBuffer to the FileChannel
-			// channel.write(buffer);
-			// channel.close();
-			// buffer.clear();
-
-			// // System.out.println("Content has been written to the file successfully.");
-			// } catch (IOException error) {
-			// error.printStackTrace();
-			// }
-
-			// // utilityPe += Integer.parseInt(projectedTransaction.getProjectedPWU());
-			// // System.out.println(projectedTransaction.getProjectedPWU());
-			// // System.out.println(utilityPe);
-			// // transactionsPe.addAll();
-
-			// } else {
-			// // This is an optimization for binary search:
-			// // we remember the position of E so that for the next item, we will not
-			// search
-			// // before "e" in the transaction since items are visited in lexicographical
-			// // order
-			// transaction.offset = low;
-			// }
-
-			// }
-			// Dataset currentDataset = new Dataset(currentFile, Integer.MAX_VALUE);
-			// transactionsPe.addAll(currentDataset.getTransactions());
-
 			// remember the total time for peforming the database projection
 			timeIntersections += (System.currentTimeMillis() - timeFirstIntersection);
 
 			// Add the last read transaction to the database if there is one
-			// if (previousTransaction != null) {
-			// transactionsPe.add(previousTransaction);
-			// }
+			if (previousTransaction != null) {
+				// transactionsPe.add(previousTransaction);
+				projectedTransactionToFile(previousTransaction, currentFile);
+			}
 
 			// Append item "e" to P to obtain P U {e}
 			// but at the same time translate from new name of "e" to its old name
 			temp[prefixLength] = newNamesToOldNames[e];
 
+			// System.out.println("**********************" + "\nutilityPe: " + utilityPe +
+			// "\n" + "minuTil: " + minUtil
+			// + "\n**********************");
 			// if the utility of PU{e} is enough to be a high utility itemset
 			if (utilityPe >= minUtil) {
+				// System.out.println("Got in output here!!!!!");
 				// output PU{e}
 				output(prefixLength, utilityPe);
-
 			}
 
 			// ==== Next, we will calculate the Local Utility and Sub-tree utility of
@@ -1562,7 +1396,7 @@ public class AlgoEFIM {
 			} else {
 				// if sub-tree utility pruning is deactivated, we consider secondary items also
 				// as primary items
-				backtrackingEFIM(currentFile, maximumTransactionCount, newItemsToKeep, newItemsToExplore,
+				backtrackingEFIM(currentFile, maximumTransactionCount, newItemsToKeep, newItemsToKeep,
 						prefixLength + 1, currentItem);
 			}
 			// System.out.println();
@@ -1830,6 +1664,8 @@ public class AlgoEFIM {
 
 				currenTransaction = createTransaction(line);
 
+				currenTransaction.prefixUtility = Integer.parseInt(line.split(":")[3]);
+
 				// ----------------------------------------------------------------
 				// count the number of transactions read
 				transactionReadingCount++;
@@ -1961,7 +1797,7 @@ public class AlgoEFIM {
 	 * @throws IOException if error while writting to output file
 	 */
 	private void output(int tempPosition, int utility) throws IOException {
-		// patternCount++;
+		patternCount++;
 
 		// // if user wants to save the results to memory
 		// if (writer == null) {
@@ -1995,10 +1831,15 @@ public class AlgoEFIM {
 		List<Integer> newItemset = new ArrayList<Integer>();
 		for (int i = 0; i <= tempPosition; i++) {
 			newItemset.add(temp[i]);
+			// System.out.println(temp[i]);
 		}
 		Itemset itemset = new Itemset(newItemset, utility);
 		kItemsets.add(itemset);
 		// System.out.println("Current minUtil: " + this.minUtil);
+
+		// System.out.println("kItemsets.size(): " + kItemsets.size());
+
+		// System.out.println("k: " + k);
 
 		if (kItemsets.size() > k) {
 			if (utility > this.minUtil) {
@@ -2011,7 +1852,7 @@ public class AlgoEFIM {
 					kItemsets.remove(lower);
 				} while (kItemsets.size() > k);
 				this.minUtil = kItemsets.peek().utility;
-				System.out.println("Current minUtil: " + this.minUtil);
+				System.out.println("New current minUtil: " + this.minUtil);
 			}
 		}
 	}

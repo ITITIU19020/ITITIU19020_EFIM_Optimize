@@ -135,6 +135,10 @@ public class Transaction {
 	public String getUtility() {
 		StringBuilder buffer = new StringBuilder();
 		for (int i = offset; i < items.length; i++) {
+			if (i == items.length - 1) {
+				buffer.append(utilities[i]);
+				return buffer.toString();
+			}
 			buffer.append(utilities[i] + " ");
 		}
 		return buffer.toString();
