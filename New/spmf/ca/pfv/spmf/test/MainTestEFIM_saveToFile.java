@@ -22,11 +22,11 @@ public class MainTestEFIM_saveToFile {
 		String output = ".//output.txt";
 
 		// the minutil threshold
-		int k = 20;
+		int k = 100;
 
 		// Run the EFIM algorithm
 		AlgoEFIM algo = new AlgoEFIM();
-		algo.runAlgorithm(k, input, output, true, Integer.MAX_VALUE, true);
+		algo.runAlgorithm(k, input, output, false, Integer.MAX_VALUE, true);
 		// Print statistics
 		algo.printStats();
 		algo.writeResultTofile(output);

@@ -23,6 +23,7 @@ import java.util.Set;
 // import java.io.FileInputStream;
 import java.io.*;
 import java.util.*;
+import java.nio.file.*;
 
 import ca.pfv.spmf.tools.MemoryLogger;
 
@@ -377,17 +378,17 @@ public class AlgoEFIM {
 		// entry.getValue());
 		// }
 
-		System.out.println("---------------------------------------");
+		// System.out.println("---------------------------------------");
 		// Get the kth item in the combined sorted map
 		Map.Entry<Integer, Integer> kth = getEntryByIndex(sortedBothMap, k - 1);
-		System.out.println("k = " + k);
+		// System.out.println("k = " + k);
 		if (kth != null) {
 			System.out.println(k + "th item: Item " + kth.getKey() + ", Utility " +
 					kth.getValue());
 			// Set kth item's utility to be the minUtil
 			minUtil = kth.getValue();
-			System.out.println("---------------------------------------");
-			System.out.println("Current minUtil: " + minUtil);
+			// System.out.println("---------------------------------------");
+			// System.out.println("Current minUtil: " + minUtil);
 		} else {
 			System.out.println("The sorted map does not have a " + k + " item.");
 			System.out.println("---------------------------------------");
@@ -402,11 +403,12 @@ public class AlgoEFIM {
 				itemsToKeep.add(j);
 			}
 		}
-		System.out.println("Real secondary items before sort by increasing order of TWU: " + "\n" + itemsToKeep);
+		// System.out.println("Real secondary items before sort by increasing order of
+		// TWU: " + "\n" + itemsToKeep);
 
 		// Sort promising items according to the increasing order of TWU
 		insertionSort(itemsToKeep, utilityBinArrayLU);
-		System.out.println("Real secondary items: " + itemsToKeep);
+		// System.out.println("Real secondary items: " + itemsToKeep);
 
 		// Rename promising items according to the increasing order of TWU.
 		// This will allow very fast comparison between items later by the algorithm
@@ -434,7 +436,7 @@ public class AlgoEFIM {
 			// increment by one the current name so that
 			currentName++;
 		}
-		System.out.println("New secondary items: " + itemsToKeep);
+		// System.out.println("New secondary items: " + itemsToKeep);
 
 		// remember the number of promising item
 		newItemCount = itemsToKeep.size();
@@ -449,7 +451,8 @@ public class AlgoEFIM {
 			System.out.println(Arrays.toString(newNamesToOldNames));
 		}
 
-		System.out.println("\nTransactions after removing unpromising items and renaming process: ");
+		// System.out.println("\nTransactions after removing unpromising items and
+		// renaming process: ");
 		// We now loop over each transaction from the dataset
 		// to remove unpromising items
 		// for (int i = 0; i < dataset.getTransactions().size(); i++) {
@@ -499,7 +502,7 @@ public class AlgoEFIM {
 					continue;
 				}
 
-				System.out.println("Sorted transactions: " + " : " + currenTransaction);
+				// System.out.println("Sorted transactions: " + " : " + currenTransaction);
 
 				content = currenTransaction.getProjectedItems() + ":" + currenTransaction
 						.getProjectedPWU() + ":" + currenTransaction.getUtility() + ":" + 0 + "\n";
@@ -760,8 +763,8 @@ public class AlgoEFIM {
 				}
 			}
 		}
-		System.out.println("Primary items: " + itemsToExplore);
-		System.out.println("Secondary items: " + itemsToKeep);
+		// System.out.println("Primary items: " + itemsToExplore);
+		// System.out.println("Secondary items: " + itemsToKeep);
 
 		// If in debug mode, show the list of promising items
 		if (DEBUG) {
@@ -784,6 +787,9 @@ public class AlgoEFIM {
 		// record the end time
 		endTimestamp = System.currentTimeMillis();
 
+		File folderFile = new File(folderPath);
+		deleteFolder(folderFile);
+
 		// close the output file
 		if (writer != null) {
 			writer.close();
@@ -797,6 +803,21 @@ public class AlgoEFIM {
 	}
 
 	// -------------------------------------------------------------------
+
+	// Delete projectedDB
+	public static void deleteFolder(File folder) {
+		File[] files = folder.listFiles();
+		if (files != null) {
+			for (File f : files) {
+				if (f.isDirectory()) {
+					deleteFolder(f);
+				} else {
+					f.delete();
+				}
+			}
+		}
+	}
+
 	/**
 	 * Sort the single items utility in descending order
 	 */
@@ -1042,8 +1063,8 @@ public class AlgoEFIM {
 		// ======== for each frequent item e =============
 		for (int j = 0; j < itemsToExplore.size(); j++) {
 			Integer e = itemsToExplore.get(j);
-			System.out.println("--------------------------------------------------------");
-			System.out.println("Current item: " + e);
+			// System.out.println("--------------------------------------------------------");
+			// System.out.println("Current item: " + e);
 
 			// // Create the full path including folder and file name
 			// filePath = folderPath + File.separator + fileName;
@@ -1381,8 +1402,8 @@ public class AlgoEFIM {
 				}
 			}
 
-			System.out.println("New secondary item = " + newItemsToKeep);
-			System.out.println("New primary item = " + newItemsToExplore);
+			// System.out.println("New secondary item = " + newItemsToKeep);
+			// System.out.println("New primary item = " + newItemsToExplore);
 
 			// update the total time for identifying promising items
 			timeIdentifyPromisingItems += (System.currentTimeMillis() - initialTime);
@@ -1797,7 +1818,7 @@ public class AlgoEFIM {
 	 * @throws IOException if error while writting to output file
 	 */
 	private void output(int tempPosition, int utility) throws IOException {
-		patternCount++;
+		// patternCount++;
 
 		// // if user wants to save the results to memory
 		// if (writer == null) {
@@ -1852,7 +1873,7 @@ public class AlgoEFIM {
 					kItemsets.remove(lower);
 				} while (kItemsets.size() > k);
 				this.minUtil = kItemsets.peek().utility;
-				System.out.println("New current minUtil: " + this.minUtil);
+				// System.out.println("New current minUtil: " + this.minUtil);
 			}
 		}
 	}
@@ -1874,7 +1895,7 @@ public class AlgoEFIM {
 			}
 
 			// append the utility value
-			buffer.append(" #UTIL: ");
+			buffer.append("#UTIL: ");
 			buffer.append(itemset.utility);
 
 			// write to file
