@@ -24,9 +24,9 @@ package ca.pfv.spmf.algorithms.frequentpatterns.efim;
 public class Transaction {
 
 	/** a buffer to store items of an itemset */
-	public static int[] tempItems = new int[2000];
+	public static int[] tempItems = new int[5000];
 	/** a buffer to store utilities of an itemset */
-	public static int[] tempUtilities = new int[2000];
+	public static int[] tempUtilities = new int[5000];
 
 	/** an offset pointer, used by projected transactions */
 	int offset;

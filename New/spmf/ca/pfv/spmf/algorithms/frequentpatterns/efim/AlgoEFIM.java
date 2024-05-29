@@ -54,14 +54,17 @@ import ca.pfv.spmf.tools.MemoryLogger;
 public class AlgoEFIM {
 
 	// ----------------------------------------------------------------
+	//keep track of file name
+	int fileCounter = 1;
+
 	// Create a single, uniform and only Transaction variable
-	Transaction currenTransaction;
+	Transaction currenTransaction = null;
 
 	// Create maxItem
 	public int maxItem = 0;
 
 	// Map to store utility values for each item (a,b,c,d)
-	Map<Integer, Integer> OneItemSetUtilityMap = new HashMap<>();
+	Map<Double, Double> OneItemSetUtilityMap = new HashMap<>();
 
 	// Map to store utility values for each item (ab,bc,cd,de)
 	Map<Integer, Map<Integer, Integer>> TwoItemSetUtilityMap = new HashMap<>();
@@ -111,7 +114,7 @@ public class AlgoEFIM {
 	private int[] utilityBinArrayLU;
 
 	/** a temporary buffer */
-	private int[] temp = new int[500];
+	private int[] temp = new int[5000];
 
 	/** The total time spent for performing intersections */
 	long timeIntersections;
@@ -135,7 +138,7 @@ public class AlgoEFIM {
 	boolean activateTransactionMerging;
 
 	/** A parameter for transaction merging */
-	final int MAXIMUM_SIZE_MERGING = 1000;
+	final int MAXIMUM_SIZE_MERGING = 50000;
 
 	/** number of times a transaction was read */
 	long transactionReadingCount;
@@ -345,7 +348,7 @@ public class AlgoEFIM {
 		// -------------------------------------------------------------------
 
 		/* Combine 1-itemset and 2-itemset process start here ***************/
-		Map<Integer, Integer> transformedDoubleMap = new HashMap<>();
+		// Map<Double, Double> transformedDoubleMap = new HashMap<>();
 		// Convert 2-itemset map to 1-itemset map
 		// Iterate over originalMap
 		for (Map.Entry<Integer, Map<Integer, Integer>> outerEntry : TwoItemSetUtilityMap.entrySet()) {
@@ -358,17 +361,28 @@ public class AlgoEFIM {
 				int value = innerEntry.getValue();
 
 				// Combine outerKey and innerKey to form the new key for transformedDoubleMap
-				int newKey = concatenateKeys(outerKey, innerKey);
+				double newKey = concatenateKeys(outerKey, innerKey);
 
 				// Put the value into transformedDoubleMap
-				transformedDoubleMap.put(newKey, value);
+				OneItemSetUtilityMap.put(newKey, (double)value);
 			}
 		}
 
-		Map<Integer, Integer> combinedMap = new HashMap<>(OneItemSetUtilityMap); // Initialize with combined Map
-		combinedMap.putAll(transformedDoubleMap); // Add all entries from map of 2-itemsets we just converted to
-													// Map<Integer, Integer>
-		Map<Integer, Integer> sortedBothMap = sortByValueDescendingSingle(combinedMap);
+		// Map<Double, Double> combinedMap = new HashMap<>(); // Initialize with combined Map
+
+		// for (Map.Entry<Integer, Integer> entry : OneItemSetUtilityMap.entrySet()) {
+		// 	combinedMap.put(entry.getKey().doubleValue(), entry.getValue().doubleValue());
+		// }
+
+		// combinedMap.putAll(transformedDoubleMap); // Add all entries from map of 2-itemsets we just converted to
+		// 											// Map<Integer, Integer>
+		// Map<Double, Double> sortedBothMap = sortByValueDescendingSingle(combinedMap);
+
+		// for (Map.Entry<Integer, Integer> entry : OneItemSetUtilityMap.entrySet()) {
+		// 	transformedDoubleMap.put(entry.getKey().doubleValue(), entry.getValue().doubleValue());
+		// }
+
+		OneItemSetUtilityMap = sortByValueDescendingSingle(OneItemSetUtilityMap);
 
 		// Print out the combined Map
 		// System.out.println("Sort the map of 1-itemsets and 2-itemset by values in
@@ -380,7 +394,7 @@ public class AlgoEFIM {
 
 		// System.out.println("---------------------------------------");
 		// Get the kth item in the combined sorted map
-		Map.Entry<Integer, Integer> kth = getEntryByIndex(sortedBothMap, k - 1);
+		Map.Entry<Double, Double> kth = getEntryByIndex(OneItemSetUtilityMap, k - 1);
 		// System.out.println("k = " + k);
 		if (kth != null) {
 			System.out.println(k + "th item: Item " + kth.getKey() + ", Utility " +
@@ -394,6 +408,11 @@ public class AlgoEFIM {
 			System.out.println("---------------------------------------");
 			System.out.println("Current minUtil: " + minUtil);
 		}
+
+		OneItemSetUtilityMap = null;
+		TwoItemSetUtilityMap = null;
+		kth = null;
+
 		// -------------------------------------------------------------------
 
 		// Now, we keep only the promising items (those having a twu >= minutil)
@@ -479,7 +498,10 @@ public class AlgoEFIM {
 		// Create content's byte
 		byte[] contentBytes;
 
-		try (BufferedReader reader = new BufferedReader(new FileReader(inputPath))) {
+		try (BufferedReader reader = new BufferedReader(new FileReader(inputPath));
+			FileChannel channel = FileChannel.open(
+			Paths.get(currentFile), StandardOpenOption.CREATE,
+			StandardOpenOption.WRITE, StandardOpenOption.APPEND);) {
 
 			String line;
 			int count = 0;
@@ -509,9 +531,7 @@ public class AlgoEFIM {
 
 				contentBytes = content.getBytes();
 
-				try (FileChannel channel = FileChannel.open(
-						Paths.get(currentFile), StandardOpenOption.CREATE,
-						StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
+				
 					// Allocate a ByteBuffer
 					ByteBuffer buffer = ByteBuffer.allocate(contentBytes.length);
 
@@ -523,20 +543,19 @@ public class AlgoEFIM {
 
 					// Write ByteBuffer to the FileChannel
 					channel.write(buffer);
-					channel.close();
 					buffer.clear();
 
 					// System.out.println("Content has been written to the file successfully.");
-				} catch (IOException error) {
-					error.printStackTrace();
-				}
+				
 
 				// if the number of transaction to be read is reached, we stop
 				if (count == maximumTransactionCount) {
+					channel.close();
 					break;
 				}
 
 			}
+			
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -821,11 +840,11 @@ public class AlgoEFIM {
 	/**
 	 * Sort the single items utility in descending order
 	 */
-	public static Map<Integer, Integer> sortByValueDescendingSingle(Map<Integer, Integer> map) {
-		List<Map.Entry<Integer, Integer>> list = new LinkedList<>(map.entrySet());
+	public static Map<Double, Double> sortByValueDescendingSingle(Map<Double, Double> map) {
+		List<Map.Entry<Double, Double>> list = new LinkedList<>(map.entrySet());
 		Collections.sort(list, (e1, e2) -> e2.getValue().compareTo(e1.getValue()));
-		Map<Integer, Integer> sortedSingleMap = new LinkedHashMap<>();
-		for (Map.Entry<Integer, Integer> entry : list) {
+		Map<Double, Double> sortedSingleMap = new LinkedHashMap<>();
+		for (Map.Entry<Double, Double> entry : list) {
 			sortedSingleMap.put(entry.getKey(), entry.getValue());
 		}
 		return sortedSingleMap;
@@ -849,9 +868,9 @@ public class AlgoEFIM {
 	 * Combine 2 items into 1
 	 */
 
-	private static int concatenateKeys(int a, int b) {
+	private static double concatenateKeys(int a, int b) {
 		// Example: For a=2 and b=4, the concatenated key will be 24
-		return Integer.parseInt(String.valueOf(a) + String.valueOf(b));
+		return Double.parseDouble(String.valueOf(a) + String.valueOf(b));
 	}
 
 	/*
@@ -957,7 +976,7 @@ public class AlgoEFIM {
 		return new Transaction(items, utilities, transactionUtility);
 	}
 
-	public void projectedTransactionToFile(Transaction inTransaction, String outFile) {
+	public void projectedTransactionToFile(Transaction inTransaction, String outFile, FileChannel inChannel) throws IOException {
 
 		// Create content to write to file
 		String content;
@@ -970,9 +989,7 @@ public class AlgoEFIM {
 
 		contentBytes = content.getBytes();
 
-		try (FileChannel channel = FileChannel.open(
-				Paths.get(outFile), StandardOpenOption.CREATE,
-				StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
+		
 			// Allocate a ByteBuffer
 			ByteBuffer buffer = ByteBuffer.allocate(contentBytes.length);
 
@@ -983,14 +1000,12 @@ public class AlgoEFIM {
 			buffer.flip();
 
 			// Write ByteBuffer to the FileChannel
-			channel.write(buffer);
-			channel.close();
+			inChannel.write(buffer);
+			
 			buffer.clear();
 
 			// System.out.println("Content has been written to the file successfully.");
-		} catch (IOException error) {
-			error.printStackTrace();
-		}
+		
 	}
 
 	// -------------------------------------------------------------------
@@ -1069,11 +1084,16 @@ public class AlgoEFIM {
 			// // Create the full path including folder and file name
 			// filePath = folderPath + File.separator + fileName;
 
-			if (parentItem != "") {
-				currentItem = parentItem + "_" + itemsToExplore.get(j);
-			} else {
-				currentItem = parentItem + itemsToExplore.get(j);
-			}
+			// if (parentItem != "") {
+			// 	currentItem = parentItem + "" + itemsToExplore.get(j);
+			// } else {
+			// 	currentItem = parentItem + itemsToExplore.get(j);
+			// }
+
+			currentItem = String.valueOf(fileCounter);
+
+			fileCounter++;
+
 			currentFile = folderPath + File.separator + currentItem + ".txt";
 			File createProjectedFile = new File(currentFile);
 			if (!createProjectedFile.exists()) {
@@ -1100,7 +1120,10 @@ public class AlgoEFIM {
 
 			// ----------------------------------------------------------------
 
-			try (BufferedReader reader = new BufferedReader(new FileReader(inputPath))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(inputPath));
+					FileChannel channel = FileChannel.open(
+								Paths.get(currentFile), StandardOpenOption.CREATE,
+								StandardOpenOption.WRITE, StandardOpenOption.APPEND);) {
 
 				String line;
 				int count = 0;
@@ -1248,7 +1271,7 @@ public class AlgoEFIM {
 									consecutiveMergeCount++;
 
 								} else {
-									projectedTransactionToFile(previousTransaction, currentFile);
+									projectedTransactionToFile(previousTransaction, currentFile, channel);
 
 									// if the transaction is not equal to the preceding transaction
 									// we cannot merge it so we just add it to the database
@@ -1267,7 +1290,7 @@ public class AlgoEFIM {
 								// we put the projected transaction in the projected database of Pe
 								// transactionsPe.add(projectedTransaction);
 
-								projectedTransactionToFile(projectedTransaction, currentFile);
+								projectedTransactionToFile(projectedTransaction, currentFile, channel);
 
 							}
 						}
@@ -1337,6 +1360,7 @@ public class AlgoEFIM {
 
 					// if the number of transaction to be read is reached, we stop
 					if (count == maximumTransactionCount) {
+						channel.close();
 						break;
 					}
 
@@ -1352,7 +1376,15 @@ public class AlgoEFIM {
 			// Add the last read transaction to the database if there is one
 			if (previousTransaction != null) {
 				// transactionsPe.add(previousTransaction);
-				projectedTransactionToFile(previousTransaction, currentFile);
+
+				FileChannel channel = FileChannel.open(
+						Paths.get(currentFile), StandardOpenOption.CREATE,
+						StandardOpenOption.WRITE, StandardOpenOption.APPEND);
+
+				projectedTransactionToFile(previousTransaction, currentFile, channel);
+
+				channel.close();
+
 			}
 
 			// Append item "e" to P to obtain P U {e}
@@ -1515,8 +1547,8 @@ public class AlgoEFIM {
 
 					int itemNum = Integer.parseInt(itemsString[i]);
 					int single_utility = Integer.parseInt(itemsUtilitiesString[i]);
-					int prevUtility = OneItemSetUtilityMap.getOrDefault(itemNum, 0);
-					OneItemSetUtilityMap.put(itemNum, prevUtility + single_utility);
+					double prevUtility = OneItemSetUtilityMap.getOrDefault((double)itemNum, 0.0);
+					OneItemSetUtilityMap.put((double)itemNum, prevUtility + (double)single_utility);
 					for (int j = i + 1; j < items.length; j++) {
 						int item2 = Integer.parseInt(itemsString[j]);
 						int double_utility = Integer.parseInt(itemsUtilitiesString[j]);
@@ -1883,7 +1915,7 @@ public class AlgoEFIM {
 		Iterator<Itemset> iter = kItemsets.iterator();
 		int counter = 1;
 		while (iter.hasNext()) {
-			System.out.print("HUIs " + counter + ": ");
+			// System.out.print("HUIs " + counter + ": ");
 
 			StringBuffer buffer = new StringBuffer();
 			Itemset itemset = (Itemset) iter.next();
@@ -1900,13 +1932,15 @@ public class AlgoEFIM {
 
 			// write to file
 			writer.write(buffer.toString());
-			System.out.println(buffer.toString());
+			// System.out.println(buffer.toString());
 			if (iter.hasNext()) {
 				writer.newLine();
 			}
 			counter++;
 		}
 		writer.close();
+
+		System.out.println("Found " + (counter-1) + " HUIs and written out to output.txt");
 	}
 
 	/**
