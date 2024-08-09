@@ -49,5 +49,4 @@ Additionally, this project also includes works from the following list:
 ## Support
 
 Please enter an issue in the repo for any questions or problems.
-
 Alternatively, you can contact us at ititiu19020@student.hcmiu.edu.vn.
