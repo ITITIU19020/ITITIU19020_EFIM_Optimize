@@ -22,9 +22,7 @@ Additionally, this project also includes works from the following list:
 
 4. Clone the repository or download the project folder provided.
 
-5. Open folder "New\spmf\ca\pfv\spmf".
-
-6. In this folder, there will be 6 main components: algorithms, projectedDB, tempStorage, test, Test_Data and tools:
+5. Open folder "New\spmf\ca\pfv\spmf". In this folder, there will be 6 main components: algorithms, projectedDB, tempStorage, test, Test_Data and tools:
     -   algorithms: Contains the main code for this project
     -   projectedDB: Keeps the projected partitions during the mining process
     -   tempStorage: Stores the temporary files for the external sorting process
