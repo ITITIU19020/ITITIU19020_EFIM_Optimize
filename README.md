@@ -36,17 +36,15 @@ Additionally, this project also includes works from the following list:
 
 6. Open the folder New\spmf\ca\pfv\spmf\test and select the MainTestEFIM_saveToFile.java file.
 
-7. Once the IDE finishes compiling, you can pick one of the available databases within this project. I recommend using the sample database within the same folder as the main function for the first time, as it is smaller and easier to run than the databases in the "Test_Data" folder.
-
-8. After that, you can change the value of the input string in the main function to the location of the selected database. For example, if you want to run the program on the "chainstore" database in the "Test_Data" folder, change the input string to New\\spmf\\ca\\pfv\\spmf\\Test_Data\\chainstore.txt.
+7. Once the IDE finishes compiling, you can pick one of the available databases within this project. For example, if you want to run the program on the "chainstore" database in the "Test_Data" folder, change the input string to New\\spmf\\ca\\pfv\\spmf\\Test_Data\\chainstore.txt. I recommend using the sample database within the same folder as the main function for the first time, as it is smaller and easier to run than the databases in the "Test_Data" folder.
 
    **Notice**: If you are cloning from the github link, the last 3 databases SUSY, SUSY x 2 and SUSY x 3 are over the limit on git, there will be a link to a [google drive link](https://drive.google.com/file/d/1rbUZB0a2vVpI9uqD8JEiCcg5FpVcyesb/view?usp=sharing) containing all the databases used in this project for download. Otherwise, the project folder provided already contains the required databases.
 
-9. Next, you can adjust the k value within the main function to your desired value. Note: As the k value increases, the algorithm takes more time to extract the required k itemsets. Therefore, I recommend choosing a small k value, such as 5, 10, or 15, for initial testing.
+8. Next, you can adjust the k value within the main function to your desired value. Note: As the k value increases, the algorithm takes more time to extract the required k itemsets. Therefore, I recommend choosing a small k value, such as 5, 10, or 15, for initial testing.
 
-10. Once you've made your adjustments, you can press "Start Debugging" in the "Run" tab in VS Code, or press "Run" at the top of your main function provided by the extension.
+9. Once you've made your adjustments, you can press "Start Debugging" in the "Run" tab in VS Code, or press "Run" at the top of your main function provided by the extension.
 
-11. Finally, you can gather the results shown in the terminal. The required itemsets will be stored in the file output.txt.
+10. Finally, you can gather the results shown in the terminal. The required itemsets will be stored in the file output.txt.
 
 ## Support
 
